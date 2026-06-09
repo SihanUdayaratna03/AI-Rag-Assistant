@@ -83,15 +83,21 @@ async def rag_query_pdf_ai(ctx: inngest.Context):
             "gemini-2.5-flash",
             "gemini-2.0-flash-lite",
         ]
-        response = client.models.generate_content(
-            model=models_to_try[0],
-            contents=[
-                "You answer questions using only the provided context.",
-                user_content
-            ],
-            config={"temperature": 0.2, "max_output_tokens": 1024}
-        )
-        return response.text.strip()
+        last_err = None
+        for model_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[
+                        "You answer questions using only the provided context.",
+                        user_content
+                    ],
+                    config={"temperature": 0.2, "max_output_tokens": 1024}
+                )
+                return response.text.strip()
+            except Exception as e:
+                last_err = e
+        raise RuntimeError(f"All models failed. Last error: {last_err}")
 
     answer = await ctx.step.run("llm-answer", lambda: _generate_answer(user_content))
     return {"answer": answer, "sources": found.sources, "num_contexts": len(found.contexts)}
