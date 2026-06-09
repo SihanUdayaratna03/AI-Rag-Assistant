@@ -77,25 +77,19 @@ async def rag_query_pdf_ai(ctx: inngest.Context):
         "Answer concisely using the context above."
     )
 
-    adapter = ai.gemini.Adapter(
-        auth_key=os.getenv("GEMINI_API_KEY"),
-        model="gemini-2.0-flash"
-    )
+    def _generate_answer(user_content: str) -> str:
+        from data_loader import client
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[
+                "You answer questions using only the provided context.",
+                user_content
+            ],
+            config={"temperature": 0.2, "max_output_tokens": 1024}
+        )
+        return response.text.strip()
 
-    res = await ctx.step.ai.infer(
-        "llm-answer",
-        adapter=adapter,
-        body={
-            "maxOutputTokens": 1024,
-            "temperature": 0.2,
-            "messages": [
-                {"role": "system", "content": "You answer questions using only the provided context."},
-                {"role": "user", "content": user_content}
-            ]
-        }
-    )
-
-    answer = res["choices"][0]["message"]["content"].strip()
+    answer = await ctx.step.run("llm-answer", lambda: _generate_answer(user_content))
     return {"answer": answer, "sources": found.sources, "num_contexts": len(found.contexts)}
 
 
