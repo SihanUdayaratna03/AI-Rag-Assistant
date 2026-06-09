@@ -78,8 +78,13 @@ async def rag_query_pdf_ai(ctx: inngest.Context):
 
     def _generate_answer(user_content: str) -> str:
         from data_loader import client
+        models_to_try = [
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash-lite",
+        ]
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=models_to_try[0],
             contents=[
                 "You answer questions using only the provided context.",
                 user_content
