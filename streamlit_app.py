@@ -85,7 +85,7 @@ def fetch_runs(event_id: str) -> list[dict]:
     return data.get("data", [])
 
 
-def wait_for_run_output(event_id: str, timeout_s: float = 300.0, poll_interval_s: float = 0.5) -> dict:
+def wait_for_run_output(event_id: str, timeout_s: float = 300.0, poll_interval_s: float = 1.0) -> dict:
     start = time.time()
     last_status = None
     while True:
@@ -93,11 +93,14 @@ def wait_for_run_output(event_id: str, timeout_s: float = 300.0, poll_interval_s
         if runs:
             run = runs[0]
             status = run.get("status")
-            last_status = status or last_status
-            if status in ("Completed", "Succeeded", "Success", "Finished"):
-                return run.get("output") or {}
-            if status in ("Failed", "Cancelled"):
-                raise RuntimeError(f"Function run {status}")
+            if status:
+                last_status = status
+                status = status.lower()
+                if status in ("completed", "succeeded", "success", "finished"):
+                    return run.get("output") or {}
+                if status in ("failed", "cancelled"):
+                    raise RuntimeError(f"Function run {status}")
+        
         if time.time() - start > timeout_s:
             raise TimeoutError(f"Timed out waiting for run output (last status: {last_status})")
         time.sleep(poll_interval_s)
